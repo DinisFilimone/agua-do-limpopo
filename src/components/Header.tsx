@@ -5,20 +5,22 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { WHATSAPP_LINK } from "@/lib/config";
+import { useSite } from "./SiteProvider";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const LINKS = [
-  { id: "servicos", label: "Serviços" },
+  { id: "formatos", label: "Formatos" },
   { id: "qualidade", label: "Qualidade" },
-  { id: "empresas", label: "Para empresas" },
+  { id: "clientes", label: "Para quem" },
+  { id: "xai-xai", label: "Xai-Xai" },
   { id: "contactos", label: "Contactos" },
 ];
 
 export default function Header() {
   const root = useRef<HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
+    const { abrirCheckout } = useSite();
 
   // cabeçalho muda de aspecto ao descer
   useEffect(() => {
@@ -100,18 +102,15 @@ export default function Header() {
           ))}
         </nav>
 
-        <a
-          href={WHATSAPP_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
+                <button
+          type="button"
+          onClick={() => abrirCheckout()}
           className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-            scrolled
-              ? "bg-azul text-white hover:bg-navy"
-              : "bg-white text-navy hover:bg-ciano"
+            scrolled ? "bg-azul text-white hover:bg-navy" : "bg-white text-navy hover:bg-ciano"
           }`}
         >
           Encomendar
-        </a>
+        </button>
       </div>
     </header>
   );

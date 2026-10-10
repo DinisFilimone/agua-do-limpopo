@@ -1,0 +1,84 @@
+import Image from "next/image";
+import { PRECOS } from "@/lib/config";
+import { EncomendarButton } from "./Botoes";
+
+type Formato = { litros: number; legenda: string; tam?: string; foto?: boolean };
+
+const FORMATOS: Formato[] = [
+  { litros: 5, legenda: "Ideal para uso diário", tam: "h-20 w-20" },
+  { litros: 6, legenda: "Prático para o dia-a-dia", tam: "h-24 w-24" },
+  { litros: 10, legenda: "Para a família e o escritório", tam: "h-32 w-32" },
+  { litros: 20, legenda: "O garrafão clássico", foto: true },
+];
+
+export default function Formatos() {
+  return (
+    <section id="formatos" className="scroll-mt-20 bg-gelo px-6 py-24">
+      <div className="mx-auto max-w-6xl">
+        <div data-reveal className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-bold uppercase tracking-widest text-azul">Formatos</p>
+          <h2 className="mt-3 text-3xl font-extrabold text-navy sm:text-4xl">
+            Recarga de água tratada, no tamanho que precisa
+          </h2>
+          <p className="mt-4 text-navy/70">
+            Escolha o formato, indique a entrega e a forma de pagamento. Entregamos em sua casa.
+          </p>
+        </div>
+
+        <div className="mt-14 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {FORMATOS.map((f, i) => {
+            const preco = PRECOS[f.litros];
+            return (
+              <div
+                key={f.litros}
+                data-reveal
+                data-delay={i * 0.1}
+                className="flex flex-col items-center rounded-2xl bg-white p-6 text-center shadow-sm ring-1 ring-navy/5 transition hover:-translate-y-1 hover:shadow-lg hover:ring-azul/40"
+              >
+                <div className="flex h-56 items-end justify-center">
+                  {f.foto ? (
+                    <Image
+                      src="/brand/garrafao-20l.png"
+                      alt="Garrafão de 20 litros Água do Limpopo"
+                      width={400}
+                      height={600}
+                      className="h-56 w-auto mix-blend-multiply"
+                    />
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`${f.tam} fill-none stroke-azul`}
+                      strokeWidth={0.9}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 3h6v3l2 3v10a2 2 0 01-2 2H9a2 2 0 01-2-2V9l2-3z" />
+                      <path d="M7 14c2-1.5 3.5 1.5 5 0s3-1.5 5 0" />
+                    </svg>
+                  )}
+                </div>
+
+                <p className="mt-4 text-5xl font-extrabold text-navy">
+                  {f.litros}
+                  <span className="ml-1 text-xl text-azul">L</span>
+                </p>
+                <p className="mt-1 text-sm font-semibold text-navy/70">Recarga de água tratada</p>
+                <p className="mt-1 text-xs text-navy/50">{f.legenda}</p>
+                {preco != null && (
+                  <p className="mt-2 text-lg font-bold text-azul">{preco.toLocaleString("pt-PT")} MT</p>
+                )}
+
+                <EncomendarButton
+                  litros={f.litros}
+                  className="mt-5 w-full rounded-full bg-azul py-2.5 text-sm font-semibold text-white transition hover:bg-navy"
+                >
+                  Encomendar
+                </EncomendarButton>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}

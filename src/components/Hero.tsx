@@ -4,7 +4,8 @@ import Image from "next/image";
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { WHATSAPP_LINK } from "@/lib/config";
+import { SLOGAN } from "@/lib/config";
+import { EncomendarButton } from "./Botoes";
 
 gsap.registerPlugin(useGSAP);
 
@@ -30,7 +31,8 @@ export default function Hero() {
     () => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
       tl.from(".hero-badge", { y: -70, opacity: 0, scale: 0.7, duration: 1 })
-        .from(".hero-title", { y: 40, opacity: 0, duration: 0.8 }, "-=0.5")
+        .from(".hero-slogan", { y: 20, opacity: 0, duration: 0.6 }, "-=0.5")
+        .from(".hero-title", { y: 40, opacity: 0, duration: 0.8 }, "-=0.4")
         .from(".hero-sub", { y: 30, opacity: 0, duration: 0.7 }, "-=0.5")
         .from(".hero-cta", { y: 20, opacity: 0, duration: 0.6, stagger: 0.12 }, "-=0.4");
 
@@ -101,7 +103,11 @@ export default function Hero() {
         </div>
       </div>
 
-      <h1 className="hero-title mt-10 max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-6xl">
+            <p className="hero-slogan mt-10 text-sm font-semibold uppercase tracking-[0.3em] text-ciano">
+        {SLOGAN}
+      </p>
+
+      <h1 className="hero-title mt-3 max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-6xl">
         Água de qualidade para um <span className="text-ciano">futuro melhor</span>
       </h1>
 
@@ -110,19 +116,14 @@ export default function Hero() {
       </p>
 
       <div className="mt-9 flex flex-wrap justify-center gap-4">
+        <EncomendarButton className="hero-cta rounded-full bg-white px-8 py-3.5 font-semibold text-navy shadow-lg transition hover:bg-ciano">
+          Encomendar agora
+        </EncomendarButton>
         <a
-          href={WHATSAPP_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hero-cta rounded-full bg-white px-8 py-3.5 font-semibold text-navy shadow-lg transition hover:bg-ciano"
-        >
-          Encomendar no WhatsApp
-        </a>
-        <a
-          href="#servicos"
+          href="#formatos"
           className="hero-cta rounded-full border-2 border-white/70 px-8 py-3.5 font-semibold text-white transition hover:bg-white/10"
         >
-          Ver serviços
+          Ver formatos
         </a>
       </div>
 
