@@ -30,7 +30,7 @@ const SEGMENTOS = [
 
 export default function ParaQuem() {
   return (
-    <section id="clientes" className="scroll-mt-20 bg-navy px-6 py-24 text-white">
+    <section id="clientes" className="scroll-mt-20 bg-navy px-6 py-16 sm:py-24 text-white">
       <div className="mx-auto max-w-6xl">
         <div data-reveal className="max-w-2xl">
           <p className="text-sm font-bold uppercase tracking-widest text-ciano">Para quem</p>
@@ -42,14 +42,13 @@ export default function ParaQuem() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
           {SEGMENTOS.map((s, i) => (
             <div
               key={s.t}
               data-reveal
               data-delay={i * 0.08}
-              className="rounded-2xl bg-white/5 p-6 ring-1 ring-white/10 transition hover:bg-white/10"
-            >
+              className={`rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 transition hover:bg-white/10 sm:p-6 ${i === SEGMENTOS.length - 1 ? "col-span-2 lg:col-span-1" : ""}`}>
               <svg
                 viewBox="0 0 24 24"
                 className="h-8 w-8 fill-none stroke-ciano"

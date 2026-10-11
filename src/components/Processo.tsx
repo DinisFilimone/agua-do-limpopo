@@ -52,7 +52,7 @@ export default function Processo() {
     <section
       id="qualidade"
       ref={root}
-      className="scroll-mt-20 bg-gelo px-6 py-24"
+      className="scroll-mt-20 bg-gelo px-6 py-16 sm:py-24"
     >
       <div className="mx-auto grid max-w-6xl items-start gap-14 md:grid-cols-2">
         <div data-reveal className="md:sticky md:top-28">
@@ -66,7 +66,7 @@ export default function Processo() {
             Cada garrafão passa por um tratamento em várias etapas e por controlo
             de qualidade antes de chegar a si.
           </p>
-          <ul className="mt-6 space-y-3 text-navy">
+          <ul className="mt-6 hidden space-y-3 text-navy md:block">
             {[
               "Filtração industrial",
               "Osmose reversa",

@@ -34,7 +34,12 @@ export default function Hero() {
         .from(".hero-slogan", { y: 20, opacity: 0, duration: 0.6 }, "-=0.5")
         .from(".hero-title", { y: 40, opacity: 0, duration: 0.8 }, "-=0.4")
         .from(".hero-sub", { y: 30, opacity: 0, duration: 0.7 }, "-=0.5")
-        .from(".hero-cta", { y: 20, opacity: 0, duration: 0.6, stagger: 0.12 }, "-=0.4");
+        .fromTo(
+          ".hero-cta",
+          { y: 20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.6, stagger: 0.12, clearProps: "opacity,transform" },
+          "-=0.4"
+        );
 
       gsap.to(".hero-badge", {
         y: -12,
@@ -75,7 +80,7 @@ export default function Hero() {
     <section
       id="inicio"
       ref={root}
-      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-linear-to-b from-[#04245c] via-navy to-azul px-6 pb-40 pt-28 text-center"
+      className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-linear-to-b from-[#04245c] via-navy to-azul px-6 pb-36 pt-24 text-center sm:pb-40 sm:pt-28"
     >
       {/* bolhas */}
       {BUBBLES.map((b, i) => (
@@ -91,37 +96,37 @@ export default function Hero() {
       {/* gota num círculo branco com brilho */}
       <div className="hero-badge relative">
         <div className="hero-glow absolute inset-0 -m-6 rounded-full bg-ciano/40 blur-2xl" />
-        <div className="relative rounded-full bg-white p-6 shadow-2xl shadow-black/30">
+        <div className="relative flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-white shadow-2xl shadow-black/30 sm:h-36 sm:w-36">
           <Image
             src="/brand/gota.png"
             alt="Água do Limpopo"
             width={160}
             height={130}
-            className="h-24 w-auto sm:h-28"
+            className="h-16 w-auto sm:h-24"
             priority
           />
         </div>
       </div>
 
-            <p className="hero-slogan mt-10 text-sm font-semibold uppercase tracking-[0.3em] text-ciano">
+      <p className="hero-slogan mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-ciano sm:mt-10 sm:text-sm">
         {SLOGAN}
       </p>
 
-      <h1 className="hero-title mt-3 max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-6xl">
+      <h1 className="hero-title mt-3 max-w-3xl text-3xl font-extrabold leading-tight text-white sm:text-6xl">
         Água de qualidade para um <span className="text-ciano">futuro melhor</span>
       </h1>
 
-      <p className="hero-sub mt-5 max-w-xl text-lg text-white/80">
+      <p className="hero-sub mt-4 max-w-xl text-base text-white/80 sm:mt-5 sm:text-lg">
         Água tratada e purificada, com entrega ao domicílio em Xai-Xai, Gaza.
       </p>
 
-      <div className="mt-9 flex flex-wrap justify-center gap-4">
-        <EncomendarButton className="hero-cta rounded-full bg-white px-8 py-3.5 font-semibold text-navy shadow-lg transition hover:bg-ciano">
+      <div className="mt-7 flex w-full max-w-xs flex-col gap-3 sm:mt-9 sm:max-w-none sm:flex-row sm:justify-center sm:gap-4">
+        <EncomendarButton className="hero-cta rounded-full bg-white px-8 py-3.5 text-center font-semibold text-navy shadow-lg transition-colors hover:bg-ciano">
           Encomendar agora
         </EncomendarButton>
         <a
           href="#formatos"
-          className="hero-cta rounded-full border-2 border-white/70 px-8 py-3.5 font-semibold text-white transition hover:bg-white/10"
+          className="hero-cta rounded-full border-2 border-white/70 px-8 py-3 text-center font-semibold text-white transition-colors hover:bg-white/10"
         >
           Ver formatos
         </a>

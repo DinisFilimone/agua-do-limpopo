@@ -13,12 +13,12 @@ export default function FloatingButtons() {
   }, []);
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-center gap-3">
+    <div className="fixed bottom-4 right-4 z-40 flex flex-col items-center gap-3 sm:bottom-5 sm:right-5">
       <button
         type="button"
         aria-label="Voltar ao topo"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`flex h-11 w-11 items-center justify-center rounded-full bg-navy text-white shadow-lg transition ${
+        className={`hidden h-11 w-11 items-center justify-center rounded-full bg-navy text-white shadow-lg transition sm:flex ${
           mostrar ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
@@ -31,9 +31,9 @@ export default function FloatingButtons() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Falar no WhatsApp"
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:h-14 sm:w-14"
       >
-        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current sm:h-7 sm:w-7" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
         </svg>
       </a>

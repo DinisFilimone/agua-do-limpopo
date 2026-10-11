@@ -3,7 +3,7 @@ import { BotaoContacto } from "./Botoes";
 
 export default function XaiXai() {
   return (
-    <section id="xai-xai" className="scroll-mt-20 overflow-hidden bg-white px-6 py-24">
+    <section id="xai-xai" className="scroll-mt-20 overflow-hidden bg-white px-6 py-16 sm:py-24">
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
         <div data-reveal>
           <p className="text-sm font-bold uppercase tracking-widest text-azul">Xai-Xai | Gaza</p>

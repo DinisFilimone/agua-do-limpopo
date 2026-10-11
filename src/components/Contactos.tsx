@@ -43,7 +43,7 @@ function Info({ titulo, icon, children }: { titulo: string; icon: React.ReactNod
 
 export default function Contactos() {
   return (
-    <section id="contactos" className="relative scroll-mt-20 bg-[#04245c] pt-32 text-white">
+    <section id="contactos" className="relative scroll-mt-20 bg-[#04245c] pt-24 sm:pt-32 text-white">
       <svg
         className="absolute inset-x-0 top-0 h-16 w-full"
         viewBox="0 0 1440 90"
