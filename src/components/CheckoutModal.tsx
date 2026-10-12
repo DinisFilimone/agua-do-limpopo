@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PAGAMENTO_NUMEROS, PRECOS, whatsappPara } from "@/lib/config";
 import { telefoneValido } from "@/lib/validacao";
 import { Campo } from "./ui";
+import Image from "next/image";
 
 const FORMATOS = [5, 6, 10, 20];
 const PASSOS = ["Pedido", "Entrega", "Pagamento"];
@@ -162,11 +163,20 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
               const preco = PRECOS[l];
               return (
                 <div key={l} className="flex items-center justify-between rounded-2xl border border-navy/10 p-4">
-                  <div>
-                    <p className="text-lg font-extrabold">{l} L</p>
-                    <p className="text-xs text-navy/60">
-                      {preco != null ? `${mt(preco)} por recarga` : "Preço a confirmar"}
-                    </p>
+                                    <div className="flex items-center gap-3">
+                    <Image
+                      src={`/brand/garrafao-${l}l.png`}
+                      alt=""
+                      width={48}
+                      height={72}
+                      className="h-14 w-auto mix-blend-multiply"
+                    />
+                    <div>
+                      <p className="text-lg font-extrabold">{l} L</p>
+                      <p className="text-xs text-navy/60">
+                        {preco != null ? `${mt(preco)} por recarga` : "Preço a confirmar"}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
