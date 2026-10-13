@@ -16,3 +16,43 @@ body {
   background: #ffffff;
   color: #0a2a5c;
 }
+
+/* efeito de clique */
+.pressionar {
+  transition: transform 120ms ease, background-color 150ms ease, color 150ms ease;
+}
+.pressionar:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* animação de sucesso */
+@keyframes tracar {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes surgir {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+.check-circulo {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: tracar 0.6s ease-out 0.1s forwards;
+}
+.check-visto {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: tracar 0.4s ease-out 0.6s forwards;
+}
+.surgir {
+  animation: surgir 0.4s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .check-circulo,
+  .check-visto {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .surgir {
+    animation: none;
+  }
+}

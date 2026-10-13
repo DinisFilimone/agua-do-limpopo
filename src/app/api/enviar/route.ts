@@ -1,4 +1,5 @@
 import { emailValido, telefoneValido } from "@/lib/validacao";
+import { MODOS, TAXA_ENTREGA, mt, preco, totalItens, type Modo } from "@/lib/config";
 
 const PAGAMENTOS: Record<string, string> = {
   mpesa: "M-Pesa",
@@ -6,6 +7,7 @@ const PAGAMENTOS: Record<string, string> = {
   dinheiro: "Dinheiro na entrega",
 };
 const FORMATOS = [5, 6, 10, 20];
+const MODOS_VALIDOS = Object.keys(MODOS) as Modo[];
 
 const texto = (v: unknown, max = 500) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const falha = (erro: string, status = 400) => Response.json({ ok: false, erro }, { status });
@@ -28,28 +30,46 @@ export async function POST(req: Request) {
   const ref = "ADL-" + Math.random().toString(36).slice(2, 8).toUpperCase();
   let assunto: string;
   let corpo: string;
+  let total: number | null = null;
 
   if (c.tipo === "encomenda") {
     const bairro = texto(c.bairro, 100);
     const pagamento = texto(c.pagamento, 20);
     const itens = (Array.isArray(c.itens) ? c.itens : []).map((i) => {
       const o = i as Record<string, unknown>;
-      return { litros: Number(o.litros), quantidade: Number(o.quantidade) };
+      return {
+        litros: Number(o.litros),
+        modo: String(o.modo) as Modo,
+        quantidade: Number(o.quantidade),
+      };
     });
     const itensValidos =
       itens.length > 0 &&
       itens.every(
-        (i) => FORMATOS.includes(i.litros) && Number.isInteger(i.quantidade) && i.quantidade >= 1 && i.quantidade <= 50
+        (i) =>
+          FORMATOS.includes(i.litros) &&
+          MODOS_VALIDOS.includes(i.modo) &&
+          Number.isInteger(i.quantidade) &&
+          i.quantidade >= 1 &&
+          i.quantidade <= 50
       );
     if (bairro.length < 2 || !PAGAMENTOS[pagamento] || !itensValidos) return falha("Dados do pedido inválidos.");
+
+    // o total é sempre calculado aqui, nunca aceite do browser
+    total = totalItens(itens);
 
     assunto = `Novo pedido ${ref}`;
     corpo = [
       `Referência: ${ref}`,
       "",
       "Itens:",
-      ...itens.map((i) => `- ${i.quantidade} × ${i.litros} L`),
-      typeof c.total === "number" ? `Total indicado no site: ${c.total} MT` : "Total: a confirmar",
+      ...itens.map((i) => {
+        const p = preco(i.litros, i.modo);
+        const valor = p != null ? mt(p * i.quantidade) : "preço a confirmar";
+        return `- ${i.quantidade} × ${i.litros} L (${MODOS[i.modo].nome}) — ${valor}`;
+      }),
+      total != null ? `Subtotal: ${mt(total)}` : "Subtotal: a confirmar",
+      `Taxa de entrega: ${TAXA_ENTREGA.min} a ${TAXA_ENTREGA.max} MT (a confirmar consoante o bairro)`,
       "",
       `Nome: ${nome}`,
       `Telefone: ${telefone}`,
@@ -85,7 +105,7 @@ export async function POST(req: Request) {
   if (!chave || !destino) {
     if (process.env.NODE_ENV !== "production") {
       console.log(`\n[MODO DE TESTE] ${assunto}\n${corpo}\n`);
-      return Response.json({ ok: true, referencia: ref, simulado: true });
+      return Response.json({ ok: true, referencia: ref, total, simulado: true });
     }
     return falha("O envio ainda não está configurado.", 503);
   }
@@ -102,5 +122,5 @@ export async function POST(req: Request) {
   });
   if (!r.ok) return falha("Não foi possível enviar neste momento.", 502);
 
-  return Response.json({ ok: true, referencia: ref });
+  return Response.json({ ok: true, referencia: ref, total });
 }

@@ -1,10 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { PAGAMENTO_NUMEROS, PRECOS, whatsappPara } from "@/lib/config";
+import {
+  MODOS,
+  TAXA_ENTREGA,
+  modosDisponiveis,
+  mt,
+  preco,
+  totalItens,
+  whatsappPara,
+  type Modo,
+} from "@/lib/config";
 import { telefoneValido } from "@/lib/validacao";
 import { Campo } from "./ui";
-import Image from "next/image";
 
 const FORMATOS = [5, 6, 10, 20];
 const PASSOS = ["Pedido", "Entrega", "Pagamento"];
@@ -18,8 +27,6 @@ const PAGAMENTOS = [
 type Pagamento = (typeof PAGAMENTOS)[number]["id"];
 type Props = { aberto: boolean; litrosInicial?: number; aoFechar: () => void };
 
-const mt = (v: number) => `${v.toLocaleString("pt-PT")} MT`;
-
 export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props) {
   const dialogo = useRef<HTMLDialogElement>(null);
   const [passo, setPasso] = useState(1);
@@ -30,11 +37,13 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
     20: 0,
     ...(litrosInicial ? { [litrosInicial]: 1 } : {}),
   }));
+  const [modo, setModo] = useState<Record<number, Modo | "">>({ 5: "", 6: "", 10: "", 20: "" });
   const [dados, setDados] = useState({ nome: "", telefone: "", bairro: "", ponto: "" });
   const [pagamento, setPagamento] = useState<Pagamento | "">("");
   const [erros, setErros] = useState<Record<string, string>>({});
   const [estado, setEstado] = useState<"idle" | "enviando" | "erro" | "ok">("idle");
   const [referencia, setReferencia] = useState("");
+  const [totalFinal, setTotalFinal] = useState<number | null>(null);
   const [simulado, setSimulado] = useState(false);
   const [armadilha, setArmadilha] = useState("");
 
@@ -52,21 +61,34 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
     };
   }, [aberto]);
 
-  const itens = FORMATOS.filter((l) => qtd[l] > 0).map((l) => ({ litros: l, quantidade: qtd[l] }));
-  const total =
-    itens.length > 0 && itens.every((i) => PRECOS[i.litros] != null)
-      ? itens.reduce((s, i) => s + (PRECOS[i.litros] as number) * i.quantidade, 0)
-      : null;
-  const resumo = itens.map((i) => `${i.quantidade} × ${i.litros} L`).join(" · ");
+  const itens = FORMATOS.filter((l) => qtd[l] > 0).map((l) => ({
+    litros: l,
+    modo: modo[l] as Modo,
+    quantidade: qtd[l],
+  }));
+  const completos = itens.every((i) => i.modo);
+  const total = completos ? totalItens(itens) : null;
+  const resumo = itens
+    .map((i) => `${i.quantidade} × ${i.litros} L${i.modo ? ` (${MODOS[i.modo].curto})` : ""}`)
+    .join(" · ");
   const metodo = PAGAMENTOS.find((p) => p.id === pagamento);
 
-  const alterar = (l: number, d: number) =>
+  const alterar = (l: number, d: number) => {
+    setErros({});
     setQtd((q) => ({ ...q, [l]: Math.min(50, Math.max(0, q[l] + d)) }));
+  };
+  const escolher = (l: number, m: Modo) => {
+    setErros({});
+    setModo((x) => ({ ...x, [l]: m }));
+  };
   const mudar = (campo: keyof typeof dados) => (v: string) => setDados((x) => ({ ...x, [campo]: v }));
 
   function seguinte() {
     const e: Record<string, string> = {};
-    if (passo === 1 && itens.length === 0) e.itens = "Escolha pelo menos um formato.";
+    if (passo === 1) {
+      if (itens.length === 0) e.itens = "Escolha pelo menos um formato.";
+      else if (!completos) e.itens = "Para cada formato, indique se é recarga ou se precisa do garrafão.";
+    }
     if (passo === 2) {
       if (dados.nome.trim().length < 2) e.nome = "Indique o seu nome.";
       if (!telefoneValido(dados.telefone)) e.telefone = "Indique um número válido, por exemplo 84 123 4567.";
@@ -87,11 +109,12 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
       const r = await fetch("/api/enviar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo: "encomenda", itens, ...dados, pagamento, total, website: armadilha }),
+        body: JSON.stringify({ tipo: "encomenda", itens, ...dados, pagamento, website: armadilha }),
       });
       const j = await r.json();
       if (!r.ok || !j.ok) throw new Error();
       setReferencia(j.referencia);
+      setTotalFinal(typeof j.total === "number" ? j.total : null);
       setSimulado(Boolean(j.simulado));
       setEstado("ok");
       setPasso(4);
@@ -102,14 +125,8 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
 
   function instrucoes() {
     if (pagamento === "dinheiro")
-      return `Vamos contactá-lo no ${dados.telefone} para confirmar a entrega. Pague em dinheiro quando receber.`;
-    if (pagamento === "mpesa" || pagamento === "emola") {
-      const numero = PAGAMENTO_NUMEROS[pagamento];
-      if (numero && total != null)
-        return `Envie ${mt(total)} por ${metodo?.nome} para o número ${numero}, indicando a referência ${referencia}.`;
-      return `Vamos contactá-lo no ${dados.telefone} com as instruções para concluir o pagamento por ${metodo?.nome}.`;
-    }
-    return "";
+      return `Vamos contactá-lo no ${dados.telefone} para confirmar o valor final, com a taxa de entrega, e combinar a entrega. Pague em dinheiro quando receber.`;
+    return `Vamos contactá-lo no ${dados.telefone} para confirmar o valor final, com a taxa de entrega, e indicar como concluir o pagamento por ${metodo?.nome}.`;
   }
 
   const textoWhats = `Olá! Quero encomendar: ${resumo}. Nome: ${dados.nome}. Bairro: ${dados.bairro}. Pagamento: ${metodo?.nome ?? ""}.`;
@@ -126,14 +143,14 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-azul">Encomendar</p>
             <h2 className="mt-1 text-2xl font-extrabold">
-              {passo === 4 ? "Pedido registado" : "Recarga de água tratada"}
+              {passo === 4 ? "Pedido registado" : "Água tratada e purificada"}
             </h2>
           </div>
           <button
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="rounded-full p-2 text-navy/60 transition hover:bg-gelo hover:text-navy"
+            className="pressionar rounded-full p-2 text-navy/60 hover:bg-gelo hover:text-navy"
           >
             ✕
           </button>
@@ -158,51 +175,95 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
         )}
 
         {passo === 1 && (
-          <div className="mt-6 space-y-3">
-            {FORMATOS.map((l) => {
-              const preco = PRECOS[l];
-              return (
-                <div key={l} className="flex items-center justify-between rounded-2xl border border-navy/10 p-4">
-                                    <div className="flex items-center gap-3">
-                    <Image
-                      src={`/brand/garrafao-${l}l.png`}
-                      alt=""
-                      width={48}
-                      height={72}
-                      className="h-14 w-auto mix-blend-multiply"
-                    />
-                    <div>
-                      <p className="text-lg font-extrabold">{l} L</p>
-                      <p className="text-xs text-navy/60">
-                        {preco != null ? `${mt(preco)} por recarga` : "Preço a confirmar"}
-                      </p>
+          <div className="mt-6">
+            <p className="rounded-xl bg-gelo p-3 text-xs text-navy/70">
+              Já tem garrafão? Escolha <strong>Recarga</strong>. Se ainda não tem, escolha{" "}
+              <strong>Garrafão com água</strong>.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {FORMATOS.map((l) => {
+                const q = qtd[l];
+                const falta = Boolean(erros.itens) && q > 0 && !modo[l];
+                const borda = falta
+                  ? "border-red-400 bg-red-50/40"
+                  : q > 0
+                    ? "border-azul/40 bg-azul/5"
+                    : "border-navy/10";
+                return (
+                  <div key={l} className={`rounded-2xl border p-4 transition ${borda}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src={`/brand/garrafao-${l}l.png`}
+                          alt=""
+                          width={48}
+                          height={72}
+                          className="h-14 w-auto mix-blend-multiply"
+                        />
+                        <p className="text-lg font-extrabold">{l} L</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          aria-label={`Menos uma unidade de ${l} litros`}
+                          onClick={() => alterar(l, -1)}
+                          className="pressionar h-9 w-9 rounded-full border border-navy/15 bg-white text-lg hover:bg-gelo"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center font-bold" aria-live="polite">
+                          {q}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Mais uma unidade de ${l} litros`}
+                          onClick={() => alterar(l, 1)}
+                          className="pressionar h-9 w-9 rounded-full border border-navy/15 bg-white text-lg hover:bg-gelo"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
+
+                    {q > 0 && (
+                      <fieldset className="mt-3">
+                        <legend className="sr-only">Tipo de compra para {l} litros</legend>
+                        <div className="grid grid-cols-2 gap-2">
+                          {modosDisponiveis(l).map((m) => {
+                            const p = preco(l, m);
+                            const ativo = modo[l] === m;
+                            return (
+                              <label
+                                key={m}
+                                className={`cursor-pointer rounded-xl border bg-white p-3 text-left text-xs transition focus-within:ring-2 focus-within:ring-azul/40 ${
+                                  ativo ? "border-azul ring-2 ring-azul/30" : "border-navy/15 hover:border-azul/50"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`modo-${l}`}
+                                  value={m}
+                                  checked={ativo}
+                                  onChange={() => escolher(l, m)}
+                                  className="sr-only"
+                                />
+                                <span className="block text-sm font-bold">{MODOS[m].nome}</span>
+                                <span className="block text-navy/60">{MODOS[m].desc}</span>
+                                <span className="mt-1 block font-bold text-azul">
+                                  {p != null ? mt(p) : "Preço a confirmar"}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      aria-label={`Menos uma recarga de ${l} litros`}
-                      onClick={() => alterar(l, -1)}
-                      className="h-9 w-9 rounded-full border border-navy/15 text-lg transition hover:bg-gelo"
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center font-bold" aria-live="polite">
-                      {qtd[l]}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`Mais uma recarga de ${l} litros`}
-                      onClick={() => alterar(l, 1)}
-                      className="h-9 w-9 rounded-full border border-navy/15 text-lg transition hover:bg-gelo"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            {erros.itens && <p className="text-xs text-red-600">{erros.itens}</p>}
+                );
+              })}
+            </div>
+            {erros.itens && <p className="mt-3 text-xs text-red-600">{erros.itens}</p>}
           </div>
         )}
 
@@ -263,7 +324,7 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
             {erros.pagamento && <p className="mt-2 text-xs text-red-600">{erros.pagamento}</p>}
             {(pagamento === "mpesa" || pagamento === "emola") && (
               <p className="mt-4 text-xs text-navy/60">
-                Depois de confirmar o pedido, receberá as instruções para concluir o pagamento.
+                Depois de confirmar o pedido, entramos em contacto consigo com as instruções para concluir o pagamento.
               </p>
             )}
             <input
@@ -280,25 +341,46 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
         )}
 
         {passo === 4 && (
-          <div className="mt-6">
-            <div className="rounded-2xl bg-gelo p-5">
+          <div className="mt-6 text-center">
+            <div className="surgir mx-auto h-16 w-16">
+              <svg
+                viewBox="0 0 52 52"
+                className="h-16 w-16"
+                fill="none"
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle className="check-circulo" cx="26" cy="26" r="25" stroke="#0a9a0a" />
+                <path className="check-visto" d="M14 27l8 8 16-17" stroke="#0a9a0a" />
+              </svg>
+            </div>
+            <h3 className="mt-4 text-xl font-extrabold">Obrigado pelo seu pedido!</h3>
+
+            <div className="mt-5 rounded-2xl bg-gelo p-5 text-left">
               <p className="text-sm text-navy/70">Referência do pedido</p>
               <p className="text-2xl font-extrabold tracking-wide text-azul">{referencia}</p>
               <p className="mt-3 text-sm font-semibold">{resumo}</p>
               <p className="text-sm text-navy/70">
-                {total != null ? `Total: ${mt(total)}` : "Total a confirmar"} · Entrega em {dados.bairro}
+                {totalFinal != null ? `Subtotal: ${mt(totalFinal)}` : "Subtotal a confirmar"} · Entrega em{" "}
+                {dados.bairro}
+              </p>
+              <p className="mt-1 text-xs text-navy/50">
+                Taxa de entrega de {TAXA_ENTREGA.min} a {TAXA_ENTREGA.max} MT, consoante o bairro.
               </p>
             </div>
-            <p className="mt-5 text-sm text-navy/80">{instrucoes()}</p>
+
+            <p className="mt-5 text-left text-sm text-navy/80">{instrucoes()}</p>
             {simulado && (
-              <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+              <p className="mt-4 rounded-xl bg-amber-50 p-3 text-left text-xs text-amber-800">
                 Modo de teste: o pedido não foi enviado por email porque o envio ainda não está configurado.
               </p>
             )}
             <button
               type="button"
               onClick={aoFechar}
-              className="mt-6 w-full rounded-full bg-azul py-3 text-sm font-semibold text-white transition hover:bg-navy"
+              className="pressionar mt-6 w-full rounded-full bg-azul py-3 text-sm font-semibold text-white hover:bg-navy"
             >
               Fechar
             </button>
@@ -307,10 +389,15 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
 
         {passo < 4 && (
           <div className="mt-8 border-t border-navy/10 pt-5">
-            <div className="flex items-center justify-between gap-4 text-sm">
+            <div className="flex items-start justify-between gap-4 text-sm">
               <span className="text-navy/70">{resumo || "Nenhum formato escolhido"}</span>
-              <span className="font-bold">{total != null ? mt(total) : "Total a confirmar"}</span>
+              <span className="shrink-0 text-right font-bold">
+                {total != null ? mt(total) : "Total a confirmar"}
+              </span>
             </div>
+            <p className="mt-1 text-xs text-navy/50">
+              + taxa de entrega: {TAXA_ENTREGA.min} a {TAXA_ENTREGA.max} MT, consoante o bairro
+            </p>
 
             {estado === "erro" && (
               <p className="mt-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">
@@ -331,7 +418,7 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
                 <button
                   type="button"
                   onClick={() => setPasso((p) => p - 1)}
-                  className="rounded-full border border-navy/20 px-6 py-3 text-sm font-semibold transition hover:bg-gelo"
+                  className="pressionar rounded-full border border-navy/20 px-6 py-3 text-sm font-semibold hover:bg-gelo"
                 >
                   Voltar
                 </button>
@@ -340,7 +427,7 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
                 <button
                   type="button"
                   onClick={seguinte}
-                  className="flex-1 rounded-full bg-azul py-3 text-sm font-semibold text-white transition hover:bg-navy"
+                  className="pressionar flex-1 rounded-full bg-azul py-3 text-sm font-semibold text-white hover:bg-navy"
                 >
                   Continuar
                 </button>
@@ -349,7 +436,7 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
                   type="button"
                   onClick={enviar}
                   disabled={estado === "enviando"}
-                  className="flex-1 rounded-full bg-folha py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                  className="pressionar flex-1 rounded-full bg-folha py-3 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
                 >
                   {estado === "enviando" ? "A enviar…" : "Confirmar pedido"}
                 </button>
