@@ -1,5 +1,5 @@
 import { emailValido, telefoneValido } from "@/lib/validacao";
-import { MODOS, TAXA_ENTREGA, mt, preco, totalItens, type Modo } from "@/lib/config";
+import { MODOS, TAXA_ENTREGA, mt, preco, taxaEntrega, totalItens, type Modo } from "@/lib/config";
 
 const PAGAMENTOS: Record<string, string> = {
   mpesa: "M-Pesa",
@@ -55,8 +55,13 @@ export async function POST(req: Request) {
       );
     if (bairro.length < 2 || !PAGAMENTOS[pagamento] || !itensValidos) return falha("Dados do pedido inválidos.");
 
-    // o total é sempre calculado aqui, nunca aceite do browser
-    total = totalItens(itens);
+    const temTroca = itens.some((i) => i.modo === "recarga");
+    if (temTroca && c.confirmaVazio !== true) return falha("Falta a confirmação do garrafão vazio.");
+
+    // subtotal e taxa são sempre calculados aqui, nunca aceites do browser
+    const subtotal = totalItens(itens);
+    const taxa = taxaEntrega(bairro) ?? TAXA_ENTREGA;
+    total = subtotal != null ? subtotal + taxa : null;
 
     assunto = `Novo pedido ${ref}`;
     corpo = [
@@ -68,8 +73,11 @@ export async function POST(req: Request) {
         const valor = p != null ? mt(p * i.quantidade) : "preço a confirmar";
         return `- ${i.quantidade} × ${i.litros} L (${MODOS[i.modo].nome}) — ${valor}`;
       }),
-      total != null ? `Subtotal: ${mt(total)}` : "Subtotal: a confirmar",
-      `Taxa de entrega: ${TAXA_ENTREGA.min} a ${TAXA_ENTREGA.max} MT (a confirmar consoante o bairro)`,
+      subtotal != null ? `Subtotal: ${mt(subtotal)}` : "Subtotal: a confirmar",
+      `Entrega (${bairro}): ${taxa === 0 ? "grátis" : mt(taxa)}`,
+      total != null ? `Total: ${mt(total)}` : "Total: a confirmar",
+      ...(temTroca ? ["Garrafão vazio pronto na entrega: confirmado pelo cliente"] : []),
+      "Nota: a taxa foi calculada pelo nome do bairro escrito pelo cliente; confirmar no contacto.",
       "",
       `Nome: ${nome}`,
       `Telefone: ${telefone}`,

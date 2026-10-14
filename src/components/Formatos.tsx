@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { TAXA_ENTREGA } from "@/lib/config";
+import { HORARIO, MORADA, TAXA_ENTREGA } from "@/lib/config";
 import { EncomendarButton } from "./Botoes";
 
 type Formato = {
@@ -38,7 +38,7 @@ const FORMATOS: Formato[] = [
 
 export default function Formatos() {
   return (
-    <section id="formatos" className="scroll-mt-20 bg-gelo px-6 py-16 sm:py-24">
+    <section id="formatos" className="scroll-mt-20 bg-gelo px-6 pb-10 pt-16 sm:pb-12 sm:pt-24">
       <div className="mx-auto max-w-6xl">
         <div data-reveal className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-bold uppercase tracking-widest text-azul">Formatos de Recarga</p>
@@ -88,9 +88,37 @@ export default function Formatos() {
           ))}
         </div>
 
-        <p data-reveal className="mx-auto mt-8 max-w-2xl text-center text-sm text-navy/60">
-          O garrafão vende-se cheio ou vazio. Se já tem o seu, paga só a recarga. Entrega ao domicílio em
-          Xai-Xai com taxa de {TAXA_ENTREGA.min} a {TAXA_ENTREGA.max} MT, consoante o bairro.
+        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          {[
+            {
+              t: "Recarga no local",
+                            d: `Traga o seu garrafão vazio à nossa unidade (${MORADA}) e pague só a recarga. Aberto ${HORARIO}. Não precisa de encomendar aqui.`,
+            },
+            {
+              t: "Troca ao domicílio",
+              d: "Encomende aqui e tenha o garrafão vazio pronto. Entregamos um garrafão cheio e higienizado do mesmo formato e levamos o vazio.",
+            },
+            {
+              t: "Garrafão com água",
+              d: "Ainda não tem garrafão? Compre-o já cheio. Nas próximas vezes, paga só a recarga ou a troca.",
+            },
+          ].map((o, i) => (
+            <div
+              key={o.t}
+              data-reveal
+              data-delay={i * 0.1}
+              className="rounded-2xl bg-white p-5 text-left shadow-sm ring-1 ring-navy/5"
+            >
+              <p className="font-bold text-navy">{o.t}</p>
+              <p className="mt-2 text-sm text-navy/70">{o.d}</p>
+            </div>
+          ))}
+        </div>
+
+                <p data-reveal className="mx-auto mt-6 max-w-2xl text-center text-xs text-navy/50">
+          Aceitamos garrafões dos nossos formatos (5, 6, 10 e 20 L), que higienizamos. Garrafões danificados não
+                    são aceites: nesse caso, paga o preço do garrafão com água. Entrega ao domicílio em Xai-Xai: grátis na
+          baixa da cidade e no Bairro 11; nos restantes bairros, {TAXA_ENTREGA} MT.
         </p>
       </div>
     </section>

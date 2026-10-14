@@ -29,6 +29,7 @@ export function Campo(
     placeholder?: string;
     autoComplete?: string;
     inputMode?: "text" | "tel" | "email" | "numeric";
+    lista?: string;
   }
 ) {
   return (
@@ -53,6 +54,7 @@ export function Campo(
           placeholder={p.placeholder}
           autoComplete={p.autoComplete}
           inputMode={p.inputMode}
+          list={p.lista}
           aria-invalid={!!p.erro}
           className={classe(p.erro)}
         />

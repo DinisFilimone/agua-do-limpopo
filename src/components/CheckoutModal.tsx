@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
+  BAIRROS_GRATIS,
   MODOS,
   TAXA_ENTREGA,
   modosDisponiveis,
   mt,
   preco,
+  taxaEntrega,
   totalItens,
   whatsappPara,
   type Modo,
@@ -38,6 +40,7 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
     ...(litrosInicial ? { [litrosInicial]: 1 } : {}),
   }));
   const [modo, setModo] = useState<Record<number, Modo | "">>({ 5: "", 6: "", 10: "", 20: "" });
+  const [confirmaVazio, setConfirmaVazio] = useState(false);
   const [dados, setDados] = useState({ nome: "", telefone: "", bairro: "", ponto: "" });
   const [pagamento, setPagamento] = useState<Pagamento | "">("");
   const [erros, setErros] = useState<Record<string, string>>({});
@@ -67,7 +70,18 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
     quantidade: qtd[l],
   }));
   const completos = itens.every((i) => i.modo);
-  const total = completos ? totalItens(itens) : null;
+  const temTroca = itens.some((i) => i.modo === "recarga");
+  const bairro = dados.bairro.trim();
+  const subtotal = completos ? totalItens(itens) : null;
+  const taxa = taxaEntrega(bairro); // null enquanto não escrevem o bairro
+  const totalGeral = subtotal != null && taxa != null ? subtotal + taxa : null;
+  const mostrado = totalGeral ?? subtotal;
+  const notaEntrega =
+    taxa === null
+      ? `Entrega grátis na baixa da cidade e no Bairro 11; nos outros bairros, ${mt(TAXA_ENTREGA)}.`
+      : taxa === 0
+        ? "Entrega grátis incluída."
+        : `Inclui entrega de ${mt(taxa)}.`;
   const resumo = itens
     .map((i) => `${i.quantidade} × ${i.litros} L${i.modo ? ` (${MODOS[i.modo].curto})` : ""}`)
     .join(" · ");
@@ -87,12 +101,13 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
     const e: Record<string, string> = {};
     if (passo === 1) {
       if (itens.length === 0) e.itens = "Escolha pelo menos um formato.";
-      else if (!completos) e.itens = "Para cada formato, indique se é recarga ou se precisa do garrafão.";
+      else if (!completos) e.itens = "Para cada formato, indique se é troca ou se precisa do garrafão.";
+      else if (temTroca && !confirmaVazio) e.itens = "Confirme que terá o garrafão vazio pronto na entrega.";
     }
     if (passo === 2) {
       if (dados.nome.trim().length < 2) e.nome = "Indique o seu nome.";
       if (!telefoneValido(dados.telefone)) e.telefone = "Indique um número válido, por exemplo 84 123 4567.";
-      if (dados.bairro.trim().length < 2) e.bairro = "Indique o bairro.";
+      if (bairro.length < 2) e.bairro = "Indique o bairro.";
     }
     setErros(e);
     if (Object.keys(e).length === 0) setPasso((p) => p + 1);
@@ -109,7 +124,17 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
       const r = await fetch("/api/enviar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo: "encomenda", itens, ...dados, pagamento, website: armadilha }),
+        body: JSON.stringify({
+          tipo: "encomenda",
+          itens,
+          nome: dados.nome,
+          telefone: dados.telefone,
+          bairro: dados.bairro,
+          ponto: dados.ponto,
+          pagamento,
+          confirmaVazio,
+          website: armadilha,
+        }),
       });
       const j = await r.json();
       if (!r.ok || !j.ok) throw new Error();
@@ -124,12 +149,13 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
   }
 
   function instrucoes() {
+    const valor = totalFinal != null ? mt(totalFinal) : "o valor do pedido";
     if (pagamento === "dinheiro")
-      return `Vamos contactá-lo no ${dados.telefone} para confirmar o valor final, com a taxa de entrega, e combinar a entrega. Pague em dinheiro quando receber.`;
-    return `Vamos contactá-lo no ${dados.telefone} para confirmar o valor final, com a taxa de entrega, e indicar como concluir o pagamento por ${metodo?.nome}.`;
+      return `Vamos contactá-lo no ${dados.telefone} para combinar a entrega. Pague ${valor} em dinheiro quando receber.`;
+    return `Vamos contactá-lo no ${dados.telefone} com as instruções para pagar ${valor} por ${metodo?.nome}.`;
   }
 
-  const textoWhats = `Olá! Quero encomendar: ${resumo}. Nome: ${dados.nome}. Bairro: ${dados.bairro}. Pagamento: ${metodo?.nome ?? ""}.`;
+  const textoWhats = `Olá! Quero encomendar: ${resumo}. Nome: ${dados.nome}. Bairro: ${bairro}. Pagamento: ${metodo?.nome ?? ""}.`;
 
   return (
     <dialog
@@ -177,7 +203,7 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
         {passo === 1 && (
           <div className="mt-6">
             <p className="rounded-xl bg-gelo p-3 text-xs text-navy/70">
-              Já tem garrafão? Escolha <strong>Recarga</strong>. Se ainda não tem, escolha{" "}
+              Já tem o garrafão vazio? Escolha <strong>Troca ao domicílio</strong>. Se ainda não tem, escolha{" "}
               <strong>Garrafão com água</strong>.
             </p>
 
@@ -263,6 +289,25 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
                 );
               })}
             </div>
+
+            {temTroca && (
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-gelo p-3 text-xs text-navy/80">
+                <input
+                  type="checkbox"
+                  checked={confirmaVazio}
+                  onChange={(e) => {
+                    setErros({});
+                    setConfirmaVazio(e.target.checked);
+                  }}
+                  className="mt-0.5 h-4 w-4 accent-[#0b8ff0]"
+                />
+                <span>
+                  Terei o garrafão vazio pronto na entrega. Se estiver danificado ou não houver garrafão, o pedido
+                  passa a <strong>Garrafão com água</strong> e pago a diferença.
+                </span>
+              </label>
+            )}
+
             {erros.itens && <p className="mt-3 text-xs text-red-600">{erros.itens}</p>}
           </div>
         )}
@@ -281,7 +326,32 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
               autoComplete="tel"
               placeholder="84 123 4567"
             />
-            <Campo id="c-bairro" rotulo="Bairro" valor={dados.bairro} aoMudar={mudar("bairro")} erro={erros.bairro} />
+
+            <div>
+              <Campo
+                id="c-bairro"
+                rotulo="Bairro"
+                valor={dados.bairro}
+                aoMudar={mudar("bairro")}
+                erro={erros.bairro}
+                lista="lista-bairros"
+                placeholder="Comece a escrever o seu bairro"
+              />
+              <datalist id="lista-bairros">
+                {BAIRROS_GRATIS.map((b) => (
+                  <option key={b} value={b} />
+                ))}
+              </datalist>
+              {taxa !== null && (
+                <p className={`mt-1.5 text-xs font-semibold ${taxa === 0 ? "text-folha" : "text-navy/60"}`}>
+                  {taxa === 0 ? "Entrega grátis neste bairro." : `Entrega neste bairro: ${mt(taxa)}.`}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-navy/50">
+                Na baixa da cidade e no Bairro 11 a entrega é grátis; nos restantes bairros custa {mt(TAXA_ENTREGA)}.
+              </p>
+            </div>
+
             <Campo
               id="c-ponto"
               rotulo="Ponto de referência"
@@ -363,12 +433,9 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
               <p className="text-2xl font-extrabold tracking-wide text-azul">{referencia}</p>
               <p className="mt-3 text-sm font-semibold">{resumo}</p>
               <p className="text-sm text-navy/70">
-                {totalFinal != null ? `Subtotal: ${mt(totalFinal)}` : "Subtotal a confirmar"} · Entrega em{" "}
-                {dados.bairro}
+                {totalFinal != null ? `Total: ${mt(totalFinal)}` : "Total a confirmar"} · Entrega: {bairro}
               </p>
-              <p className="mt-1 text-xs text-navy/50">
-                Taxa de entrega de {TAXA_ENTREGA.min} a {TAXA_ENTREGA.max} MT, consoante o bairro.
-              </p>
+              <p className="mt-1 text-xs text-navy/50">{notaEntrega}</p>
             </div>
 
             <p className="mt-5 text-left text-sm text-navy/80">{instrucoes()}</p>
@@ -392,12 +459,10 @@ export default function CheckoutModal({ aberto, litrosInicial, aoFechar }: Props
             <div className="flex items-start justify-between gap-4 text-sm">
               <span className="text-navy/70">{resumo || "Nenhum formato escolhido"}</span>
               <span className="shrink-0 text-right font-bold">
-                {total != null ? mt(total) : "Total a confirmar"}
+                {mostrado != null ? mt(mostrado) : "Total a confirmar"}
               </span>
             </div>
-            <p className="mt-1 text-xs text-navy/50">
-              + taxa de entrega: {TAXA_ENTREGA.min} a {TAXA_ENTREGA.max} MT, consoante o bairro
-            </p>
+            <p className="mt-1 text-xs text-navy/50">{notaEntrega}</p>
 
             {estado === "erro" && (
               <p className="mt-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">

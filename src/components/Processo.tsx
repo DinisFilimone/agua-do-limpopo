@@ -52,7 +52,7 @@ export default function Processo() {
     <section
       id="qualidade"
       ref={root}
-      className="scroll-mt-20 bg-gelo px-6 py-16 sm:py-24"
+      className="scroll-mt-20 bg-gelo px-6 pb-16 pt-10 sm:pb-24 sm:pt-12"
     >
       <div className="mx-auto grid max-w-6xl items-start gap-14 md:grid-cols-2">
         <div data-reveal className="md:sticky md:top-28">
