@@ -128,7 +128,10 @@ export async function POST(req: Request) {
       text: corpo,
     }),
   });
-  if (!r.ok) return falha("Não foi possível enviar neste momento.", 502);
+    if (!r.ok) {
+    console.error("Resend falhou:", r.status, await r.text());
+    return falha("Não foi possível enviar neste momento.", 502);
+  }
 
   return Response.json({ ok: true, referencia: ref, total });
 }
